@@ -19,7 +19,7 @@ def trainingset_preparation(DataFrame=pd.DataFrame()):
        Input:
              DataFrame = .xlsx file with all covariates as in the reference dataset.
              If no dataframe is passed to the function, the reference dataset
-             will be loaded from '..URL to be added..'.
+             will be loaded from 'https://RiccardoGM.github.io/Covid19Project/Data/FlowCitometryData.xlsx'.
     '''
 
 
