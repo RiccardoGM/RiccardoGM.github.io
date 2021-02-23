@@ -29,39 +29,101 @@ def trainingset_preparation(DataFrame=pd.DataFrame()):
     ColumnsRef = DataRef.columns.values.copy()
     
     
-    # Assign dataset to be used as training set
+    ## Assign dataset to be used as training set
     if not DataFrame.empty:
-        
-        # create local copy
-        Data = DataFrame.copy()
-        Columns = Data.columns.values.copy()
-        
-        # check consistency with ref. dataset
-        if np.array_equal(Columns, ColumnsRef):
-            pass
-        else:
-            StrError1 = '; '.join(Columns)+';'
-            StrError2 = '; '.join(ColumnsRef)+';'
-            raise ValueError('Wrong column format.\nInserted format:\n%s\nExpected format:\n%s' %(StrError1, StrError2))
-    
+        print('Preprocessing not yet available for generic training set. Using reference dataset instead...\n')
+        # Use ref. dataframe
+        Data = DataRef.copy()
+        Columns = ColumnsRef.copy()
+#         # Create local copy
+#         Data = DataFrame.copy()
+#         Columns = Data.columns.values.copy()
+#         # Check consistency with ref. dataset
+#         if np.array_equal(Columns, ColumnsRef):
+#             pass
+#         else:
+#             StrError1 = '; '.join(Columns)+';'
+#             StrError2 = '; '.join(ColumnsRef)+';'
+#             raise ValueError('Wrong column format.\nInserted format:\n%s\nExpected format:\n%s' %(StrError1, StrError2))
     else:
-        
-        # use ref. dataframe
+        # Use ref. dataframe
         Data = DataRef.copy()
         Columns = ColumnsRef.copy()
     
     
-    # Print info about covariates
+    ## Dimensions of raw data
     N_samples = Data.shape[0]
     N_covariates = Data.shape[1]
-    print('Available data:\n')
+
+    
+    ## Check and fix data types, save dates
+    Dates = []
     for i, element in enumerate(Columns):
-        if 'date' not in element:
-            N_data = Data[element].count()
-            print(element+':', ' %d/%d' % (N_data, N_samples))
+        if 'date' in element:
+            Dates.append(element)
+            Data[element] = pd.to_datetime(Data[element], errors='coerce')
+        else:
+            Data[element] = pd.to_numeric(Data[element], errors='coerce')
+            
+            
+    ## Drop columns with too many nans
+    N_nans_threshold = N_samples / 2.
+    mask_columns = Data.count(axis=0).values < N_nans_threshold
+    Data.drop(columns=Data.columns[mask_columns], inplace=True)
+    Columns = Data.columns.values.copy()
+    N_covariates = Data.shape[1]
+    
+    
+    ## Convert dates to reals
+    ReferenceTime = datetime.datetime(2100, 1, 1, 1, 0) # datetime.datetime(1970, 1, 1, 1, 0) -> 0
+    ReferenceTime = ReferenceTime.timestamp()
+    for i in range(N_samples):
+        for date in Dates:
+            datetime_obj = Data.loc[i, date]
+            if datetime_obj:
+                Data.loc[i, date] = float(ReferenceTime - datetime_obj.timestamp())
+    
+    
+    ## Check and fix data values
+    '''
+        Add checks on e.g. dates (not from future), sex/death \in (0, 1), etc.
+        To be completed...
+    '''
+    date1 = 'hospitalization_date'
+    date2 = 'death_date'
+    mask = Data.loc[:, date1].values < Data.loc[:, date2].values
+    Data.loc[mask, date1] = Data.loc[mask, date2].values
+    Data.loc[mask, 'OS_days'] = 0
+    
+    
+    ## Collect ranges info
+    MinMaxInfo = {}
+    for i, element in enumerate(Columns):
+        MinMaxInfo[element] = {}
+        if 'date' in element:
+            MinMaxInfo[element]['min'] = []
+            MinMaxInfo[element]['max'] = []
+        else:
+            MinMaxInfo[element]['min'] = np.nanmin(Data[element])
+            MinMaxInfo[element]['max'] = np.nanmax(Data[element])
+            
+            
+    ## Print info about covariates
+    if print_info:
+        print('Available data:\n')
+        for i, element in enumerate(Columns):
+            if 'date' not in element:
+                N_data = Data[element].count()
+                print(element+':', ' %d/%d (%.0f%%)' % (N_data, N_samples, 100*N_data/N_samples))
+                print('Range: [%.1f, %.1f]\n\n' % (MinMaxInfo[element]['min'], MinMaxInfo[element]['max']))
         
     
-    # Return prepared dataset
+    ## Add index column
+    ID_values = list(map(lambda x: str(x), np.arange(1, N_samples+1, 1)))
+    Data.insert(loc=N_covariates, column='ID', value=ID_values)
+    
+    
+    ## Return prepared dataset
     return Data
 
 
