@@ -24,7 +24,7 @@ def trainingset_preparation(DataFrame=pd.DataFrame()):
     
     
     # Load ref. dataset
-    StrPath = '/Users/Riccardo/TriesteProject/Covid19/Datasets/SecondWave_Citofluorimetria/FlowCitometryData.xlsx' #URL or local path
+    StrPath = 'https://RiccardoGM.github.io/Covid19Project/Data/FlowCitometryData.xlsx' #URL or local path
     DataRef = pd.read_excel(StrPath, engine='openpyxl')
     ColumnsRef = DataRef.columns.values.copy()
     
