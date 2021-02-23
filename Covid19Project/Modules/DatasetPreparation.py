@@ -107,14 +107,80 @@ def trainingset_preparation(DataFrame=pd.DataFrame(), print_info=False):
             MinMaxInfo[element]['max'] = np.nanmax(Data[element])
             
             
+    ## Collect means info
+    Age_threshold = 70
+    Age_range_1 = 'All ages'
+    Age_range_2 = 'Age >= %d' % Age_threshold
+    Age_range_3 = 'Age < %d' % Age_threshold
+    #
+    Mask_age_2 = Data.loc[:, 'age'].values >= Age_threshold
+    Mask_age_3 = Mask_age_2 == False
+    Mask_death = Data.loc[:, 'death'].values == 1
+    Mask_no_death = Mask_death == False
+    #
+    MeansInfo = {}
+    for i, element in enumerate(Columns):
+        MeansInfo[element] = {Age_range_1: {'All': [],
+                                           'Death = 0': [],
+                                           'Death = 1': []
+                                          },
+                              Age_range_2: {'All': [],
+                                           'Death = 0': [],
+                                           'Death = 1': []
+                                           },
+                              Age_range_3:  {'All': [],
+                                           'Death = 0': [],
+                                           'Death = 1': []
+                                          }}
+        if 'date' in element:
+            pass
+        else:
+            v = Data[element].values
+            #
+            MeansInfo[element][Age_range_1]['All'] = np.nanmean(v)
+            MeansInfo[element][Age_range_1]['Death = 0'] = np.nanmean(v[Mask_no_death])
+            MeansInfo[element][Age_range_1]['Death = 1'] = np.nanmean(v[Mask_death])
+            #
+            MeansInfo[element][Age_range_2]['All'] = np.nanmean(v[Mask_age_2])
+            MeansInfo[element][Age_range_2]['Death = 0'] = np.nanmean(v[(Mask_age_2) & (Mask_no_death)])
+            MeansInfo[element][Age_range_2]['Death = 1'] = np.nanmean(v[(Mask_age_2) & (Mask_death)])
+            #
+            MeansInfo[element][Age_range_3]['All'] = np.nanmean(v[Mask_age_3])
+            MeansInfo[element][Age_range_3]['Death = 0'] = np.nanmean(v[(Mask_age_3) & (Mask_no_death)])
+            MeansInfo[element][Age_range_3]['Death = 1'] = np.nanmean(v[(Mask_age_3) & (Mask_death)])
+            
+            
     ## Print info about covariates
     if print_info:
         print('Available data:\n')
         for i, element in enumerate(Columns):
             if 'date' not in element:
                 N_data = Data[element].count()
-                print(element+':', ' %d/%d (%.0f%%)' % (N_data, N_samples, 100*N_data/N_samples))
-                print('Range: [%.1f, %.1f]\n\n' % (MinMaxInfo[element]['min'], MinMaxInfo[element]['max']))
+                print(element)
+                str_to_show = 'Availability:\n%d/%d (%.0f%%)' % (N_data, N_samples, 100*N_data/N_samples)
+                print(str_to_show)
+                #
+                str_to_show = 'Range:\n[%.1f, %.1f]' % (MinMaxInfo[element]['min'], MinMaxInfo[element]['max'])
+                print(str_to_show)
+                #
+                Age_range = Age_range_1
+                val_1 = MeansInfo[element][Age_range]['All']
+                val_2 = MeansInfo[element][Age_range]['Death = 0']
+                val_3 = MeansInfo[element][Age_range]['Death = 1']
+                str_to_show = 'Means:\n%s  %.2f (All), %.2f (Death = 0), %.2f (Death = 1)' % (Age_range, val_1, val_2, val_3)
+                print(str_to_show)
+                Age_range = Age_range_2
+                val_1 = MeansInfo[element][Age_range]['All']
+                val_2 = MeansInfo[element][Age_range]['Death = 0']
+                val_3 = MeansInfo[element][Age_range]['Death = 1']
+                str_to_show = '%s %.2f (All), %.2f (Death = 0), %.2f (Death = 1)' % (Age_range, val_1, val_2, val_3)
+                print(str_to_show)
+                Age_range = Age_range_3
+                val_1 = MeansInfo[element][Age_range]['All']
+                val_2 = MeansInfo[element][Age_range]['Death = 0']
+                val_3 = MeansInfo[element][Age_range]['Death = 1']
+                str_to_show = '%s %.2f  (All), %.2f (Death = 0), %.2f (Death = 1)\n\n' % (Age_range, val_1, val_2, val_3)
+                print(str_to_show)
         
     
     ## Add index column
