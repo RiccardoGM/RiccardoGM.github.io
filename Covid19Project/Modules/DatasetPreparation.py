@@ -152,7 +152,7 @@ def trainingset_preparation(DataFrame=pd.DataFrame(), print_info=False):
             
     ## Print info about covariates
     if print_info:
-        print('Available data:\n')
+        print('Description of training set:\n')
         for i, element in enumerate(Columns):
             if 'date' not in element:
                 N_data = Data[element].count()
