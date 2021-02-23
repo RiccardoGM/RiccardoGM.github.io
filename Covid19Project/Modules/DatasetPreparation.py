@@ -58,7 +58,7 @@ def trainingset_preparation(DataFrame=pd.DataFrame()):
     for i, element in enumerate(Columns):
         if 'date' not in element:
             N_data = Data[element].count()
-            print(element, ': %d/%d' % (N_data, N_samples))
+            print(element+':', ' %d/%d' % (N_data, N_samples))
         
     
     # Return prepared dataset
