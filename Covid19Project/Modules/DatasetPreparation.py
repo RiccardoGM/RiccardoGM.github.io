@@ -16,9 +16,10 @@ def trainingset_preparation(DataFrame=pd.DataFrame(), print_info=False):
     '''
        This function prepares the training set for pre-processing.
        Input: 
-             DataFrame = .xlsx file with all covariates as in the reference dataset.
-             If no dataframe is passed to the function, the reference dataset
-             will be loaded from '..URL to be added..'.
+             1) DataFrame: .xlsx file with all covariates as in the reference dataset.
+                If no dataframe is passed to the function, the reference dataset
+                will be loaded from '..URL to be added..'.
+             2) print_info: boolean - whether to show basic info about training set (True) or not (False).
     '''
     
     
@@ -190,6 +191,42 @@ def trainingset_preparation(DataFrame=pd.DataFrame(), print_info=False):
     
     ## Return prepared dataset
     return Data
+
+
+# ---- # ---- # ---- # ---- # ---- # ---- # ---- # ---- #
+
+
+def trainingset_preprocessing(Data, print_info=False):
+    
+    '''
+       This function prepares the training set for pre-processing.
+       Input: 
+             1) Data: pandas DataFrame with all covariates ready for preprocessing.
+             2) print_info: boolean - whether to show basic info about training set (True) or not (False).
+    '''
+    
+    ## Create local copy
+    Data_v0 = Data.copy()
+    
+    
+    ## Organize data
+    Columns_features = ['age', 'sex', 'WBC/uL', 'Mono/uL', 'Linfo/uL',
+                        'T CD3 %', 'T CD3/uL', 'T CD4 %', 'T CD4/uL', 'T CD8 %', 'T CD8/uL', 'CD4/CD8',
+                        'NK %', 'NK/uL', 'B CD19 %', 'B CD19/uL', 'T CD3/HLADR %', 'T CD3 HLA DR/uL',
+                        'T CD4 HLADR %', '% T CD4 HLADR POS', 'T CD8 HLADR %', '% T CD8 HLADR POS',
+                        'T NK-like %', 'LRTE % dei CD4', 'LRTE/uL', 'Mono DR %', 'MONO DR IFI']
+    Columns_target = ['death', 'OS_days']
+    Columns_dates = ['hospitalization_date', 'death_date', 'birth_date']
+    #
+    DataV1_X = Data_v0.loc[:, Columns_features].astype(float)
+    Data_Y = Data_v0.loc[:, Columns_target].astype(float)
+    Data_dates = Data_v0.loc[:, Columns_dates].astype(float)
+    Data_ID = Data_v0.loc[:, ['ID']]
+    Data_Age = Data_v0.loc[:, ['age']]
+    
+    
+    ## Return preprocessed datasets
+    return DataV1_X, Data_Y, Data_ID, Data_Age
 
 
 # ---- # ---- # ---- # ---- # ---- # ---- # ---- # ---- #
