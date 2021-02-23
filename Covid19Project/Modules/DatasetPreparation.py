@@ -11,11 +11,10 @@ import datetime
 # ---- # ---- # ---- # ---- # ---- # ---- # ---- # ---- #
 
 
-def trainingset_preparation(DataFrame=pd.DataFrame()):
+def trainingset_preparation(DataFrame=pd.DataFrame(), print_info=False):
     
     '''
        This function prepares the training set for pre-processing.
-       
        Input: 
              DataFrame = .xlsx file with all covariates as in the reference dataset.
              If no dataframe is passed to the function, the reference dataset
@@ -23,7 +22,7 @@ def trainingset_preparation(DataFrame=pd.DataFrame()):
     '''
     
     
-    # Load ref. dataset
+    ## Load ref. dataset
     StrPath = 'https://RiccardoGM.github.io/Covid19Project/Data/FlowCitometryData.xlsx' #URL or local path
     DataRef = pd.read_excel(StrPath, engine='openpyxl')
     ColumnsRef = DataRef.columns.values.copy()
