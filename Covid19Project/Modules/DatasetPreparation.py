@@ -56,7 +56,7 @@ def trainingset_preparation(DataFrame=pd.DataFrame()):
     N_covariates = Data.shape[1]
     for i, element in enumerate(Columns):
         if 'date' not in element:
-            N_data = pd.count(Data[element], numeric_only=True)
+            N_data = Data[element].count()
             print(element, 'N available data: %d/%d' % (N_data, N_samples))
         
     
