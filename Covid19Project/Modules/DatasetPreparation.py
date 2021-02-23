@@ -4,6 +4,7 @@
 import pandas as pd
 import numpy as np
 import datetime
+from scipy.stats import kurtosistest
 # from collections import Counter
 # import re
 
@@ -17,8 +18,9 @@ def trainingset_preparation(DataFrame=pd.DataFrame(), print_info=False):
        This function prepares the training set for pre-processing.
        Input: 
              1) DataFrame: .xlsx file with all covariates as in the reference dataset.
-                If no dataframe is passed to the function, the reference dataset
-                will be loaded from '..URL to be added..'.
+             If no dataframe is passed to the function, the reference dataset
+             will be loaded from '..URL to be added..'.
+             
              2) print_info: boolean - whether to show basic info about training set (True) or not (False).
     '''
     
@@ -153,12 +155,12 @@ def trainingset_preparation(DataFrame=pd.DataFrame(), print_info=False):
             
     ## Print info about covariates
     if print_info:
-        print('Description of training set:\n')
+        print('Available data:\n')
         for i, element in enumerate(Columns):
             if 'date' not in element:
                 N_data = Data[element].count()
                 print(element)
-                str_to_show = 'Availability:\n%d/%d (%.1f%%)' % (N_data, N_samples, 100*N_data/N_samples)
+                str_to_show = 'Availability:\n%d/%d (%.0f%%)' % (N_data, N_samples, 100*N_data/N_samples)
                 print(str_to_show)
                 #
                 str_to_show = 'Range:\n[%.1f, %.1f]' % (MinMaxInfo[element]['min'], MinMaxInfo[element]['max'])
@@ -190,43 +192,65 @@ def trainingset_preparation(DataFrame=pd.DataFrame(), print_info=False):
     
     
     ## Return prepared dataset
-    return Data
+    return Data, MinMaxInfo
 
 
 # ---- # ---- # ---- # ---- # ---- # ---- # ---- # ---- #
 
 
-def trainingset_preprocessing(Data, print_info=False):
+def trainingset_preprocessing(Data, MinMaxInfo, print_info=False):
     
     '''
        This function prepares the training set for pre-processing.
        Input: 
              1) Data: pandas DataFrame with all covariates ready for preprocessing.
-             2) print_info: boolean - whether to show basic info about training set (True) or not (False).
+             
+             2) MinMaxInfo: dictionary with {'covariate name': {'min': [] or value, 'max': [] or value}}
+             
+             3) print_info: boolean - whether to show basic info about training set (True) or not (False).
     '''
     
+    
     ## Create local copy
-    Data_v0 = Data.copy()
+    Data_local = Data.copy()
     
     
-    ## Organize data
-    Columns_features = ['age', 'sex', 'WBC/uL', 'Mono/uL', 'Linfo/uL',
-                        'T CD3 %', 'T CD3/uL', 'T CD4 %', 'T CD4/uL', 'T CD8 %', 'T CD8/uL', 'CD4/CD8',
-                        'NK %', 'NK/uL', 'B CD19 %', 'B CD19/uL', 'T CD3/HLADR %', 'T CD3 HLA DR/uL',
-                        'T CD4 HLADR %', '% T CD4 HLADR POS', 'T CD8 HLADR %', '% T CD8 HLADR POS',
-                        'T NK-like %', 'LRTE % dei CD4', 'LRTE/uL', 'Mono DR %', 'MONO DR IFI']
+    ## Datasets from input data
+    Columns_features = ['age', 'sex', 'WBC/uL', 'Mono/uL', 'Linfo/uL', 'T CD4 %',
+                        'T CD4/uL', 'T CD8 %', 'T CD8/uL', 'CD4/CD8', 'NK %', 'NK/uL',
+                        'B CD19 %', '% T CD4 HLADR POS', '% T CD8 HLADR POS', 'T NK-like %',
+                        'LRTE % dei CD4', 'Mono DR %', 'MONO DR IFI']
+                        # Excluded features: 'T CD3 %', 'T CD3/uL', 'T CD3/HLADR %', 'T CD3 HLA DR/uL',
+                        #                    'B CD19/uL', 'LRTE/uL', 'T CD8 HLADR %', 'T CD4 HLADR %'
     Columns_target = ['death', 'OS_days']
     Columns_dates = ['hospitalization_date', 'death_date', 'birth_date']
     #
-    DataV1_X = Data_v0.loc[:, Columns_features].astype(float)
-    Data_Y = Data_v0.loc[:, Columns_target].astype(float)
-    Data_dates = Data_v0.loc[:, Columns_dates].astype(float)
-    Data_ID = Data_v0.loc[:, ['ID']]
-    Data_Age = Data_v0.loc[:, ['age']]
+    Data_X = Data_local.loc[:, Columns_features].astype(float)
+    Data_Y = Data_local.loc[:, Columns_target].astype(float)
+    Data_dates = Data_local.loc[:, Columns_dates].astype(float)
+    Data_ID = Data_local.loc[:, ['ID']]
+    Data_Age = Data_local.loc[:, ['age']]
     
+    
+    ## Apply x->log(1+x) where kurtosis is above threshold
+    kurtosis_threshold = 6
+    skew_threshold = -1.5
+    X_kurtosis = kurtosistest(Data_X.values, axis=0, nan_policy='omit').statistic
+    X_skew = Data_X.skew(axis=0)
+    Features_LogProcessing = {}
+    for i, element in enumerate(Columns_features):
+        Features_LogProcessing[element] = {'Reflection': False,
+                                        'Log': False}
+        if (X_kurtosis[i]>kurtosis_threshold and element!='sex'):
+            Features_LogProcessing[element]['Log'] = True
+            if (X_skew[element]<skew_threshold):
+                Features_LogProcessing[element]['Reflection'] = True
+                max_val = MinMaxInfo[element]['max']
+                Data_X.loc[:, element] = max_val - Data_X.loc[:, element].values
+            Data_X.loc[:, element] = np.log(1+Data_X.loc[:, element].values)        
     
     ## Return preprocessed datasets
-    return DataV1_X, Data_Y, Data_ID, Data_Age
+    return Data_X, Data_Y, Data_ID, Data_Age, Features_LogProcessing
 
 
 # ---- # ---- # ---- # ---- # ---- # ---- # ---- # ---- #
