@@ -157,7 +157,7 @@ def trainingset_preparation(DataFrame=pd.DataFrame(), print_info=False):
             if 'date' not in element:
                 N_data = Data[element].count()
                 print(element)
-                str_to_show = 'Availability:\n%d/%d (%.0f%%)' % (N_data, N_samples, 100*N_data/N_samples)
+                str_to_show = 'Availability:\n%d/%d (%.1f%%)' % (N_data, N_samples, 100*N_data/N_samples)
                 print(str_to_show)
                 #
                 str_to_show = 'Range:\n[%.1f, %.1f]' % (MinMaxInfo[element]['min'], MinMaxInfo[element]['max'])
