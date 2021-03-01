@@ -387,6 +387,12 @@ def fix_outliers(X_train, X_test=np.array(None), features=[]):
     #
     for idx in range(N_features):
         feature = features[idx]
+        if feature == 'sex':
+            str_to_add = 'Sesso'
+        elif feature == 'age':
+            str_to_add = 'Eta\''
+        else:
+            str_to_add = feature
         x = X_train_c[:, idx]
         mask_notnull = pd.notnull(x)
         x = x[mask_notnull]
@@ -425,7 +431,7 @@ def fix_outliers(X_train, X_test=np.array(None), features=[]):
             max_val = float(max(x))
             if max_val-quantile_top1>prefactor*(quantile_top1-quantile_top2):
                 flag_outliers = True
-                features_with_outliers.append('%s: (+)' % (feature))
+                features_with_outliers.append('%s (+)' % (str_to_add))
                 mask_q1 = x>quantile_top1
                 n_new_values = sum(mask_q1)
                 new_values = np.random.uniform(low=quantile_top2, high=quantile_top1, size=n_new_values)
@@ -434,9 +440,8 @@ def fix_outliers(X_train, X_test=np.array(None), features=[]):
             # fix lower tail
             min_val = float(min(x))
             if quantile_min1-min_val>prefactor*(quantile_min2-quantile_min1):
-                print(idx, min_val, quantile_min1, quantile_min2) # CHECK!!!
                 flag_outliers = True
-                features_with_outliers.append('%s: (-)' % (feature))
+                features_with_outliers.append('%s (-)' % (str_to_add))
                 mask_q1 = np.array(x<quantile_min1)
                 n_new_values = sum(mask_q1)
                 new_values = np.random.uniform(low=quantile_min1, high=quantile_min2, size=n_new_values)
@@ -447,8 +452,8 @@ def fix_outliers(X_train, X_test=np.array(None), features=[]):
     # Print warning
     if flag_outliers:
         #print('Warning! Outliers found in test set at:\n', features_with_outliers, '\n')
-        str_to_show = ' '.join(features_with_outliers)
-        print('Attenzione! Outliers individuati nelle seguenti variabili:\n', str_to_show, '\n')
+        str_to_show = '; '.join(features_with_outliers)
+        print('\nAttenzione! Outliers individuati nelle seguenti variabili:\n', str_to_show)
     
     if X_test.any():
         return X_train_c, X_test_c
@@ -525,9 +530,17 @@ def prediction(X_train, y_train, X_test=np.array(None)):
     
     
     ## Show scatterplot and info
-    print('Mappa di classificazione:')
+    print('\nMappa di classificazione:')
     classification_plot2D(X_1, X_2, y_train, SVC_2D, X_1_test, X_2_test)
-    
+    #
+    flag = False
+    if max(X_1_test) < min(X_1) or min(X_1_test) > max(X_1):
+        flag = True
+    if max(X_1_test) < min(X_1) or min(X_1_test) > max(X_1):
+        flag = True
+    if flag:
+        print('Test fuori dall\' intervallo mostrato\n')
+        
     
     ## Print info
     n_msc = np.sum(y_SVC_2D + y_train == 1)
@@ -673,22 +686,35 @@ def run_classification():
     for element in input_list:
         flag = True
         while flag:
-            value = input('Inserire "%s" - intervallo osservato: [%.2f, %.2f]\n' % (element, MinMaxInfo[element]['min'], MinMaxInfo[element]['max']))
+            if element == 'age':
+                str_to_show = 'Eta\''
+            else:
+                str_to_show = element
+            min_val = MinMaxInfo[element]['min']
+            max_val = MinMaxInfo[element]['max']
+            value = input('Inserire "%s" - intervallo osservato: [%.2f, %.2f]\n' % (str_to_show, min_val, max_val))
+            #
             if isfloat(value) or value=='':
                 if isfloat(value):
                     value = float(value)
+                    if value>=0:
+                        if '%' in element:
+                            if value <= 100:
+                                flag = False
+                        else:
+                            flag = False
                 else:
                     value = np.nan
-                flag = False
+                    flag = False
+            #
         input_data.append(value)
     Data_test = pd.DataFrame([input_data], columns=['ID', 'sex', *input_list], index=[1])
     #
-    print('Valori inseriti:\n')
+    print('\nValori inseriti:\n')
     for element in Data_test.columns:
         str_to_show = ' '.join(list(map(lambda x: str(x), Data_test[element].values)))
         str_to_show = '%s: %s' % (element, str_to_show)
         print(str_to_show)
-    print('\n')
         
         
     ## Preprocessing
