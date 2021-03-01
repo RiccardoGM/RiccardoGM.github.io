@@ -530,11 +530,11 @@ def prediction(X_train, y_train, X_test=np.array(None)):
     n_msc = np.sum(y_SVC_2D + y_train == 1)
     if X_test.any():
         prediction_str = ' '.join(map(str, y_SVC_2D_test))
-        print('Prediction: %s' % prediction_str, '\n')
-    print('N misclassified =', n_msc, '(%.2f%%)'%(100*n_msc/len(y_train)), '\n')
-    print('F1 score: %.2f' % f1_score(y_train, y_SVC_2D), '\n')
-    print('Recall: %.2f' % recall_score(y_train, y_SVC_2D), '\n')
-    print('Precision: %.2f' % precision_score(y_train, y_SVC_2D), '\n')
+        print('Predizione: %s' % prediction_str, '\n')
+    #print('N misclassified =', n_msc, '(%.2f%%)'%(100*n_msc/len(y_train)), '\n')
+    #print('F1 score: %.2f' % f1_score(y_train, y_SVC_2D), '\n')
+    print('Sensibilità (Recall): %.2f' % recall_score(y_train, y_SVC_2D), '\n')
+    print('Valore predittivo positivo (Precision): %.2f' % precision_score(y_train, y_SVC_2D), '\n')
     
     
 # ---- # ---- # ---- # ---- # ---- # ---- # ---- # ---- #
@@ -657,12 +657,12 @@ def run_classification():
     Data_test = pd.DataFrame()
     input_data = []
     #
-    value = input('Inserire "ID"')
+    value = input('Inserire "ID"\n')
     input_data.append(value)
     #
     flag = True
     while flag:
-        value = input('Inserire "Sesso (M=0, F=1)"')
+        value = input('Inserire "Sesso (M=0, F=1)"\n')
         if value in ('0', '1'):
             flag = False
     input_data.append(value)
@@ -679,7 +679,13 @@ def run_classification():
                 flag = False
         input_data.append(value)
     Data_test = pd.DataFrame([input_data], columns=['ID', 'sex', *input_list], index=[1])
-    print('Valori inseriti:\n', Data_test)
+    #
+    print('Valori inseriti:\n')
+    for element in Data_test.columns:
+        str_to_show = ' '.join(list(map(lambda x: str(x), Data_test[element].values)))
+        str_to_show = '%s: %s' % (element, str_to_show)
+        print(str_to_show)
+        
         
     ## Preprocessing
     Preprocessed_data_dict = preprocessing(Data_train, MinMaxInfo, Data_test=Data_test, print_info=False)
