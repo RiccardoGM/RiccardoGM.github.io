@@ -425,7 +425,7 @@ def fix_outliers(X_train, X_test=np.array(None), features=[]):
             max_val = float(max(x))
             if max_val-quantile_top1>prefactor*(quantile_top1-quantile_top2):
                 flag_outliers = True
-                features_with_outliers.append('%s: top' % (feature))
+                features_with_outliers.append('%s: (+)' % (feature))
                 mask_q1 = x>quantile_top1
                 n_new_values = sum(mask_q1)
                 new_values = np.random.uniform(low=quantile_top2, high=quantile_top1, size=n_new_values)
@@ -436,7 +436,7 @@ def fix_outliers(X_train, X_test=np.array(None), features=[]):
             if quantile_min1-min_val>prefactor*(quantile_min2-quantile_min1):
                 print(idx, min_val, quantile_min1, quantile_min2) # CHECK!!!
                 flag_outliers = True
-                features_with_outliers.append('%s: bottom' % (feature))
+                features_with_outliers.append('%s: (-)' % (feature))
                 mask_q1 = np.array(x<quantile_min1)
                 n_new_values = sum(mask_q1)
                 new_values = np.random.uniform(low=quantile_min1, high=quantile_min2, size=n_new_values)
@@ -446,7 +446,9 @@ def fix_outliers(X_train, X_test=np.array(None), features=[]):
             
     # Print warning
     if flag_outliers:
-        print('Warning! Outliers found in test set at:\n', features_with_outliers, '\n')
+        #print('Warning! Outliers found in test set at:\n', features_with_outliers, '\n')
+        str_to_show = ' '.join(features_with_outliers)
+        print('Attenzione! Outliers individuati nelle seguenti variabili:\n', str_to_show, '\n')
     
     if X_test.any():
         return X_train_c, X_test_c
@@ -523,18 +525,19 @@ def prediction(X_train, y_train, X_test=np.array(None)):
     
     
     ## Show scatterplot and info
+    print('Mappa di classificazione:')
     classification_plot2D(X_1, X_2, y_train, SVC_2D, X_1_test, X_2_test)
     
     
     ## Print info
     n_msc = np.sum(y_SVC_2D + y_train == 1)
     if X_test.any():
-        prediction_str = ' '.join(map(str, y_SVC_2D_test))
+        prediction_str = ' '.join(map(str, y_SVC_2D_test.astype(int)))
         print('Predizione: %s' % prediction_str, '\n')
     #print('N misclassified =', n_msc, '(%.2f%%)'%(100*n_msc/len(y_train)), '\n')
     #print('F1 score: %.2f' % f1_score(y_train, y_SVC_2D), '\n')
-    print('Sensibilità (Recall): %.2f' % recall_score(y_train, y_SVC_2D), '\n')
-    print('Valore predittivo positivo (Precision): %.2f' % precision_score(y_train, y_SVC_2D), '\n')
+    print('Sensibilita\': %.2f' % recall_score(y_train, y_SVC_2D), '\n')
+    print('Valore predittivo positivo: %.2f' % precision_score(y_train, y_SVC_2D), '\n')
     
     
 # ---- # ---- # ---- # ---- # ---- # ---- # ---- # ---- #
@@ -685,6 +688,7 @@ def run_classification():
         str_to_show = ' '.join(list(map(lambda x: str(x), Data_test[element].values)))
         str_to_show = '%s: %s' % (element, str_to_show)
         print(str_to_show)
+    print('\n')
         
         
     ## Preprocessing
