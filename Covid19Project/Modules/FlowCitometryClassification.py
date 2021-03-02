@@ -1,6 +1,12 @@
-# Module with dataset preparation function
+## Module description
+'''
+    This file includes all functions needed to run 
+    classifications based on flow citometry data as
+    in the reference dataset 'FlowCitometryData.xlsx'
+'''
 
 
+## import statements
 import pandas as pd
 import numpy as np
 import datetime
@@ -26,7 +32,7 @@ def trainingset_preparation(DataFrame=pd.DataFrame(), print_info=False):
        Input: 
              1) DataFrame: .xlsx file with all covariates as in the reference dataset.
                            If no dataframe is passed to the function, the reference dataset
-                           will be loaded from '..URL to be added..'.
+                           will be loaded from path in StrPath.
              2) print_info: boolean - whether to show basic info about training set (True) or not (False).
     '''
     
@@ -204,14 +210,13 @@ def trainingset_preparation(DataFrame=pd.DataFrame(), print_info=False):
 # ---- # ---- # ---- # ---- # ---- # ---- # ---- # ---- #
 
 
-def preprocessing(Data, MinMaxInfo, Data_test=pd.DataFrame(), print_info=False):
+def preprocessing(Data, MinMaxInfo, Data_test=pd.DataFrame()):
     
     '''
-       This function prepares the training set for pre-processing.
+       This function pre-processes data for training and testing.
        Input: 
              1) Data: pandas DataFrame with all covariates ready for preprocessing.
              2) MinMaxInfo: dictionary with {'covariate name': {'min': [] or value, 'max': [] or value}}
-             3) print_info: boolean - whether to show basic info about training set (True) or not (False).
     '''
     
     
@@ -221,15 +226,15 @@ def preprocessing(Data, MinMaxInfo, Data_test=pd.DataFrame(), print_info=False):
     
     ## Datasets from input data
     Features = ['age', 'sex', 'WBC/uL', 'Mono/uL', 'Linfo/uL', 'T CD4 %',
-                        'T CD4/uL', 'T CD8 %', 'T CD8/uL', 'CD4/CD8', 'NK %', 'NK/uL',
-                        'B CD19 %', '% T CD4 HLADR POS', '% T CD8 HLADR POS', 'T NK-like %',
-                        'LRTE % dei CD4', 'Mono DR %', 'MONO DR IFI']
-                        # Excluded features: 'T CD3 %', 'T CD3/uL', 'T CD3/HLADR %', 'T CD3 HLA DR/uL',
-                        #                    'B CD19/uL', 'LRTE/uL', 'T CD8 HLADR %', 'T CD4 HLADR %'
+                'T CD4/uL', 'T CD8 %', 'T CD8/uL', 'CD4/CD8', 'NK %', 'NK/uL',
+                'B CD19 %', '% T CD4 HLADR POS', '% T CD8 HLADR POS',
+                'T NK-like %', 'LRTE % dei CD4', 'Mono DR %', 'MONO DR IFI']
+    # Excluded features: 'T CD3 %', 'T CD3/uL', 'T CD3/HLADR %', 'T CD3 HLA DR/uL',
+    #                    'B CD19/uL', 'LRTE/uL', 'T CD8 HLADR %', 'T CD4 HLADR %'
     Features_cat = [col for col in Features if (np.isin(Data_local[col].dropna().unique(), [0, 1]).all())]
     Features_noncat = [col for col in Features if col not in Features_cat]
     Target = ['death']
-    Dates = ['hospitalization_date', 'death_date', 'birth_date']
+    Dates = [col for col in Features if 'date' in col]
     #
     Data_X = Data_local.loc[:, Features].astype(float)
     Data_Y = Data_local.loc[:, Target].astype(float)
@@ -303,13 +308,13 @@ def preprocessing(Data, MinMaxInfo, Data_test=pd.DataFrame(), print_info=False):
     ## Fix tails
     if Data_test.empty:
         X = Data_X.loc[:, Features_noncat].values
-        X = fix_outliers(X)
+        X = fix_outliers(X, Features_noncat)
         Data_X.loc[:, Features_noncat] = X
     # Test set
     else:        
         X = Data_X.loc[:, Features_noncat].values
         X_test = Data_X_test.loc[:, Features_noncat].values
-        X, X_test = fix_outliers(X, X_test, Features_noncat)
+        X, X_test = fix_outliers(X, Features_noncat, X_test=X_test)
         Data_X.loc[:, Features_noncat] = X
         Data_X_test.loc[:, Features_noncat] = X_test
     
@@ -344,16 +349,17 @@ def preprocessing(Data, MinMaxInfo, Data_test=pd.DataFrame(), print_info=False):
 # ---- # ---- # ---- # ---- # ---- # ---- # ---- # ---- #
 
 
-def fix_outliers(X_train, X_test=np.array(None), features=[]):
+def fix_outliers(X_train, features, X_test=np.array(None)):
 
     '''
        This function fixes outliers detected as follows:
-       - for upper tail check if abs(maxvalue - qantile99)>10*abs(quantile98 - quantile99)
-       - for lower tail check if abs(minvalue - qantile01)>10*abs(quantile01 - quantile02)       
+       - for upper tail check if maxvalue - qantile99>prefactor*(quantile98 - quantile99)
+       - for lower tail check if qantile01 - minvalue)>prefactor*(quantile02 - quantile01)       
        Input: 
              1) X_train: 2D np.array (n_samples x n_features).
-             2) X_test: 2D np.array with same format as X_train.
-             3) features: list with features names.
+             2) features: list with features names.
+             3) X_test: 2D np.array with same format as X_train.
+             
     '''
     
     
@@ -467,7 +473,7 @@ def fix_outliers(X_train, X_test=np.array(None), features=[]):
 def prediction(X_train, y_train, X_test=np.array(None)):
 
     '''
-       This function trains several models on training set and returns the best one.
+       This function trains several models on training set and applies/shows the best one.
        Corrige: currently only a 2D SVC is implemented (data are projected onto plane 
        defined by a LR model (axis v_1) and first pca component on hyperplane perp. to v_1).
        Input: 
@@ -559,7 +565,7 @@ def prediction(X_train, y_train, X_test=np.array(None)):
 def age_masking(X_train, y_train, age_train, age_test):
     
     '''
-       This returns data masked by age. The lower bound is set according to min(age_test). 
+       This function returns data masked by age. The lower bound is set according to min(age_test). 
        Input: 
              1) X_train: 2D np.array (n_samples x n_features).
              2) y_train: 1D np.array (n_samples).
@@ -611,6 +617,7 @@ def classification_plot2D(X_1, X_2, y, classifier, X_1_test, X_2_test):
              6) X_2_test: 1D np.array with feature 2 test values.
     '''
     
+    SetPlotParams()
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(8, 8))
     cm = plt.cm.RdBu
     cm_bright = ListedColormap(['#FF0000', '#0000FF'])
@@ -643,7 +650,7 @@ def classification_plot2D(X_1, X_2, y, classifier, X_1_test, X_2_test):
     ax.scatter(X_1, X_2, c=y, cmap=cm_bright, edgecolors='face', s=7, alpha=0.7)
 
     ## Plot the test points
-    ax.scatter(X_1_test, X_2_test, color='black', marker='x', s=80, linewidths=0.5, alpha=1)
+    ax.scatter(X_1_test, X_2_test, color='black', marker='x', s=80, linewidth=2., alpha=1)
     
     ax.set_xlim(x_1_min, x_1_max)
     ax.set_ylim(x_2_min, x_2_max)
@@ -718,7 +725,7 @@ def run_classification():
         
         
     ## Preprocessing
-    Preprocessed_data_dict = preprocessing(Data_train, MinMaxInfo, Data_test=Data_test, print_info=False)
+    Preprocessed_data_dict = preprocessing(Data_train, MinMaxInfo, Data_test=Data_test)
     X_train = Preprocessed_data_dict['Training set']['X'].values
     y_train = Preprocessed_data_dict['Training set']['Y'].values.ravel()
     age_train = Preprocessed_data_dict['Training set']['Age'].values.ravel()
@@ -744,5 +751,72 @@ def isfloat(value):
     except ValueError:
         return False
     
+
+# ---- # ---- # ---- # ---- # ---- # ---- # ---- # ---- #
+
+
+def SetPlotParams(magnification=1.0, ratio=float(2.2/2.7), fontsize=11., ylabelsize=None, xlabelsize=None):
+    
+    plt.style.use('ggplot')
+
+    if (ylabelsize==None):
+        ylabelsize = fontsize
+    if (xlabelsize==None):
+        xlabelsize = fontsize
+
+    ratio = ratio  # usually this is 2.2/2.7
+    fig_width = 2.9 * magnification # width in inches
+    fig_height = fig_width*ratio  # height in inches
+    fig_size = [fig_width,fig_height]
+    plt.rcParams['figure.figsize'] = fig_size
+    plt.rcParams['figure.autolayout'] = True
+
+    plt.rcParams['lines.linewidth'] = 0.7
+    #plt.rcParams['lines.markeredgewidth'] = 0.25
+    #plt.rcParams['lines.markersize'] = 1
+    plt.rcParams['lines.markeredgewidth'] = 1.
+    plt.rcParams['errorbar.capsize'] = 1 #1.5
+
+    plt.rcParams['font.size'] = fontsize
+    plt.rcParams['legend.frameon'] = False
+    plt.rcParams['legend.numpoints'] = 1
+    plt.rcParams['legend.markerscale'] = 1
+    plt.rcParams['legend.handlelength'] = 1.5
+    plt.rcParams['legend.labelspacing'] = 0.3
+    plt.rcParams['legend.columnspacing'] = 0.3
+    plt.rcParams['legend.fontsize'] = fontsize
+    plt.rcParams['axes.facecolor'] = '1'
+    plt.rcParams['axes.edgecolor'] = '0.0'
+    plt.rcParams['axes.linewidth'] = '0.7'
+
+    plt.rcParams['grid.color'] = '0.85'
+    plt.rcParams['grid.linestyle'] = '-'
+    plt.rcParams['grid.linewidth'] = '0.7'
+    plt.rcParams['grid.alpha'] = '1.'
+
+    plt.rcParams['axes.labelcolor'] = '0'
+    plt.rcParams['axes.labelsize'] = fontsize
+    plt.rcParams['axes.titlesize'] = fontsize
+    plt.rcParams['xtick.labelsize'] = xlabelsize
+    plt.rcParams['ytick.labelsize'] = ylabelsize
+    plt.rcParams['xtick.color'] = '0'
+    plt.rcParams['ytick.color'] = '0'
+
+    plt.rcParams['xtick.major.size'] = 3.
+    plt.rcParams['xtick.major.width'] = 0.7
+    plt.rcParams['xtick.minor.size'] = 0
+    plt.rcParams['ytick.major.size'] = 3.
+    plt.rcParams['ytick.major.width'] = 0.7
+    plt.rcParams['ytick.minor.size'] = 0
+    plt.rcParams['xtick.major.pad']= 5.
+    plt.rcParams['ytick.major.pad']= 5.
+
+    #plt.rcParams['font.sans-serif'] = 'Arial'
+    #plt.rcParams['font.serif'] = 'mc'
+    #plt.rcParams['text.usetex'] = False # set to True for TeX-like fonts
+    #plt.rc('font', family='serif')
+
+    #sn.set_context("paper", rc={"font.size":11, "axes.titlesize":11, "axes.labelsize":11}) # uncomment for seaborn
+
 
 # ---- # ---- # ---- # ---- # ---- # ---- # ---- # ---- #
