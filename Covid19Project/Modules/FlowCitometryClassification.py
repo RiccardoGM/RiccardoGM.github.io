@@ -1,6 +1,6 @@
 ## Module description
 '''
-    This file includes all functions needed to run 
+    This file contains all functions needed to run 
     classifications based on flow citometry data as
     in the reference dataset 'FlowCitometryData.xlsx'
 '''
@@ -244,10 +244,15 @@ def preprocessing(Data, MinMaxInfo, Data_test=pd.DataFrame()):
     # Test set
     if not Data_test.empty:
         Data_X_test = Data_test.loc[:, Features].astype(float)
-        #Data_Y_test = Data_test.loc[:, Target].astype(float) # Target not available for test set
         #Data_dates_test = Data_test.loc[:, Dates].astype(float) # Currently not required
         Data_ID_test = Data_test.loc[:, ['ID']]
         Data_Age_test = Data_test.loc[:, ['age']]
+        intersection = set.intersection(set(Data_test.columns), set(Target))
+        flag_test_target = False
+        if len(intersection)>0:
+            flag_test_target = True
+            Data_Y_test = Data_test.loc[:, Target].astype(float)
+            
     
     ## Apply x->log(1+x) where kurtosis is above threshold
     kurtosis_threshold = 6
@@ -343,13 +348,15 @@ def preprocessing(Data, MinMaxInfo, Data_test=pd.DataFrame()):
         returns['Test set'] = {'X': Data_X_test,
                                'ID': Data_ID_test,
                                'Age': Data_Age_test}
+        if flag_test_target:
+            returns['Test set']['Y'] = Data_Y_test
     return returns
 
 
 # ---- # ---- # ---- # ---- # ---- # ---- # ---- # ---- #
 
 
-def fix_outliers(X_train, features, X_test=np.array(None)):
+def fix_outliers(X_train, features, X_test=np.array([])):
 
     '''
        This function fixes outliers detected as follows:
@@ -365,14 +372,14 @@ def fix_outliers(X_train, features, X_test=np.array(None)):
     
     ## Create local copy
     X_train_c = X_train.copy()
-    if X_test.any():
+    if len(X_test)>0:
         X_test_c = X_test.copy()
         
     
     ## Check input format
     if len(X_train_c.shape)==2:
         N_features = X_train_c.shape[1]
-        if X_test.any():
+        if len(X_test)>0:
             X_test_c = X_test_c.reshape(-1, N_features)
     else:
         raise Exception("Wrong input format. Accepted format: n_samples x n_features (2D array).")
@@ -428,7 +435,7 @@ def fix_outliers(X_train, features, X_test=np.array(None)):
         X_train_c[mask_notnull, idx] = x
         
         # Test set
-        if X_test.any():
+        if len(X_test)>0:
             x = X_test_c[:, idx]
             mask_notnull = pd.notnull(x)
             x = x[mask_notnull]
@@ -461,7 +468,7 @@ def fix_outliers(X_train, features, X_test=np.array(None)):
         str_to_show = '; '.join(features_with_outliers)
         print('\nAttenzione! Outliers individuati nelle seguenti variabili:\n', str_to_show)
     
-    if X_test.any():
+    if len(X_test)>0:
         return X_train_c, X_test_c
     else:
         return X_train_c
@@ -470,7 +477,7 @@ def fix_outliers(X_train, features, X_test=np.array(None)):
 # ---- # ---- # ---- # ---- # ---- # ---- # ---- # ---- #
 
 
-def prediction(X_train, y_train, X_test=np.array(None)):
+def prediction(X_train, y_train, X_test=np.array([]), y_test=np.array([])):
 
     '''
        This function trains several models on training set and applies/shows the best one.
@@ -513,7 +520,8 @@ def prediction(X_train, y_train, X_test=np.array(None)):
     
     ## Find first pca component on hyperplane from misclassified
     DR_pca = PCA(n_components=1)
-    X1D_2_pca = DR_pca.fit(X_perpendicular[mask_misclass, :], y_train[mask_misclass]).transform(X_train)
+    #X1D_2_pca = DR_pca.fit(X_perpendicular[mask_misclass, :], y_train[mask_misclass]).transform(X_train) # use missclassified data
+    X1D_2_pca = DR_pca.fit(X_perpendicular, y_train).transform(X_train) # use all data
     
     
     ## SVC on both axis
@@ -526,38 +534,45 @@ def prediction(X_train, y_train, X_test=np.array(None)):
     
     
     ## Test set
-    if X_test.any():
+    if len(X_test)>0:
         X1D_1_test = np.dot(X_test, v_1)
         X1D_2_pca_test = DR_pca.transform(X_test)
         X_1_test = X1D_1_test.reshape(-1, 1)
         X_2_test = X1D_2_pca_test.reshape(-1, 1)
         X2D_test = np.concatenate((X_1_test, X_2_test), axis=1)
         y_SVC_2D_test = SVC_2D.predict(X2D_test)
+    else:
+        X_1_test = np.array([])
+        X_2_test = np.array([])
     
     
     ## Show scatterplot and info
     print('\nMappa di classificazione:')
-    classification_plot2D(X_1, X_2, y_train, SVC_2D, X_1_test, X_2_test)
+    classification_plot2D(X_1, X_2, y_train, SVC_2D, X_1_test, X_2_test, y_test)
     #
-    flag = False
-    if max(X_1_test) < min(X_1) or min(X_1_test) > max(X_1):
-        flag = True
-    if max(X_1_test) < min(X_1) or min(X_1_test) > max(X_1):
-        flag = True
-    if flag:
-        print('Test fuori dall\' intervallo mostrato\n')
+    if len(X_test)>0:
+        flag = False
+        if max(X_1_test) < min(X_1) or min(X_1_test) > max(X_1):
+            flag = True
+        if max(X_1_test) < min(X_1) or min(X_1_test) > max(X_1):
+            flag = True
+        if flag:
+            print('Test (tutto o in parte) fuori dall\' intervallo mostrato\n')
         
     
     ## Print info
-    n_msc = np.sum(y_SVC_2D + y_train == 1)
-    if X_test.any():
+    if len(X_test)>0:
         prediction_str = ' '.join(map(str, y_SVC_2D_test.astype(int)))
         print('Predizione: %s' % prediction_str, '\n')
+    n_msc = np.sum(y_SVC_2D + y_train == 1)
     #print('N misclassified =', n_msc, '(%.2f%%)'%(100*n_msc/len(y_train)), '\n')
     #print('F1 score: %.2f' % f1_score(y_train, y_SVC_2D), '\n')
     print('Sensibilita\': %.2f' % recall_score(y_train, y_SVC_2D), '\n')
     print('Valore predittivo positivo: %.2f' % precision_score(y_train, y_SVC_2D), '\n')
-    
+    #
+    if len(y_test)>10 and np.sum(y_test)>0:
+        print('Sensibilita\' test: %.2f' % recall_score(y_test, y_SVC_2D_test), '\n')
+        print('Valore predittivo positivo test: %.2f' % precision_score(y_test, y_SVC_2D_test), '\n')
     
 # ---- # ---- # ---- # ---- # ---- # ---- # ---- # ---- #
 
@@ -603,7 +618,7 @@ def age_masking(X_train, y_train, age_train, age_test):
 # ---- # ---- # ---- # ---- # ---- # ---- # ---- # ---- #
 
 
-def classification_plot2D(X_1, X_2, y, classifier, X_1_test, X_2_test):
+def classification_plot2D(X_1, X_2, y, classifier, X_1_test=np.array([]), X_2_test=np.array([]), y_test=np.array([])):
     
     '''
        This function produces a scatterplot of the (2D) training data, 
@@ -615,9 +630,10 @@ def classification_plot2D(X_1, X_2, y, classifier, X_1_test, X_2_test):
              4) classifier: model trained on X_1, X_2 and y.
              5) X_1_test: 1D np.array with feature 1 test values.
              6) X_2_test: 1D np.array with feature 2 test values.
+             7) y: 1D np.array with target test values.
     '''
     
-    SetPlotParams()
+    #SetPlotParams()
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(8, 8))
     cm = plt.cm.RdBu
     cm_bright = ListedColormap(['#FF0000', '#0000FF'])
@@ -625,8 +641,8 @@ def classification_plot2D(X_1, X_2, y, classifier, X_1_test, X_2_test):
     
     ## Define grid
     h = .02  # step size in the mesh
-    x_1_min, x_1_max = X_1.min() - abs(X_1.min())/2., X_1.max() + abs(X_1.max())/2.
-    x_2_min, x_2_max = X_2.min() - abs(X_2.min())/2., X_2.max() + abs(X_2.max())/2.
+    x_1_min, x_1_max = X_1.min() - 3., X_1.max() + 3.
+    x_2_min, x_2_max = X_2.min() - 3., X_2.max() + 3.
     xx_1, xx_2 = np.meshgrid(np.arange(x_1_min, x_1_max, h),
                          np.arange(x_2_min, x_2_max, h))
     X = np.concatenate((X_1.reshape(-1, 1), X_2.reshape(-1, 1)), axis=1)
@@ -650,7 +666,11 @@ def classification_plot2D(X_1, X_2, y, classifier, X_1_test, X_2_test):
     ax.scatter(X_1, X_2, c=y, cmap=cm_bright, edgecolors='face', s=7, alpha=0.7)
 
     ## Plot the test points
-    ax.scatter(X_1_test, X_2_test, color='black', marker='x', s=80, linewidth=2., alpha=1)
+    if len(X_1_test)>0 and len(X_2_test)>0:
+        if len(y_test)>0:
+            ax.scatter(X_1_test, X_2_test, c=y_test, vmin=0., vmax=1., cmap=cm_bright, marker='x', edgecolors='face', s=80, alpha=1)
+        else:
+            ax.scatter(X_1_test, X_2_test, color='black', marker='x', s=80, linewidth=2., alpha=1)
     
     ax.set_xlim(x_1_min, x_1_max)
     ax.set_ylim(x_2_min, x_2_max)
@@ -731,6 +751,10 @@ def run_classification():
     age_train = Preprocessed_data_dict['Training set']['Age'].values.ravel()
     X_test = Preprocessed_data_dict['Test set']['X'].values
     age_test = Preprocessed_data_dict['Test set']['Age'].values.ravel()
+    if 'Y' in Preprocessed_data_dict['Test set'].keys():
+        y_test = Preprocessed_data_dict['Test set']['Y'].values.ravel()
+    else:
+        y_test = np.array([])
     
     
     ## Age masking
@@ -738,7 +762,7 @@ def run_classification():
     
     
     ## Prediction
-    prediction(X_train, y_train, X_test=X_test)
+    prediction(X_train, y_train, X_test=X_test, y_test=y_test)
     
 
 # ---- # ---- # ---- # ---- # ---- # ---- # ---- # ---- #
