@@ -634,7 +634,7 @@ def classification_plot2D(X_1, X_2, y, classifier, X_1_test=np.array([]), X_2_te
     '''
     
     #SetPlotParams()
-    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(8, 8))
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(7, 7))
     cm = plt.cm.RdBu
     cm_bright = ListedColormap(['#FF0000', '#0000FF'])
     
