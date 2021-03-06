@@ -444,7 +444,7 @@ def fix_outliers(X_train, features, X_test=np.array([])):
             max_val = float(max(x))
             if max_val-quantile_top1>prefactor*(quantile_top1-quantile_top2):
                 flag_outliers = True
-                features_with_outliers.append('%s (+)' % (str_to_add))
+                features_with_outliers.append('\u2022 %s (+)' % (str_to_add))
                 mask_q1 = x>quantile_top1
                 n_new_values = sum(mask_q1)
                 new_values = np.random.uniform(low=quantile_top2, high=quantile_top1, size=n_new_values)
@@ -454,7 +454,7 @@ def fix_outliers(X_train, features, X_test=np.array([])):
             min_val = float(min(x))
             if quantile_min1-min_val>prefactor*(quantile_min2-quantile_min1):
                 flag_outliers = True
-                features_with_outliers.append('%s (-)' % (str_to_add))
+                features_with_outliers.append('\u2022 %s (-)' % (str_to_add))
                 mask_q1 = np.array(x<quantile_min1)
                 n_new_values = sum(mask_q1)
                 new_values = np.random.uniform(low=quantile_min1, high=quantile_min2, size=n_new_values)
@@ -465,8 +465,9 @@ def fix_outliers(X_train, features, X_test=np.array([])):
     # Print warning
     if flag_outliers:
         #print('Warning! Outliers found in test set at:\n', features_with_outliers, '\n')
-        str_to_show = '; '.join(features_with_outliers)
-        print('\nAttenzione! Outliers individuati nelle seguenti variabili:\n', str_to_show)
+        str_to_show = '\n'.join(features_with_outliers)
+        print('\nAttenzione! Outliers individuati nelle seguenti variabili:')
+        print(str_to_show)
     
     if len(X_test)>0:
         return X_train_c, X_test_c
@@ -547,13 +548,13 @@ def prediction(X_train, y_train, X_test=np.array([]), y_test=np.array([])):
     
     
     ## Show scatterplot and info
-    print('\nMappa di classificazione:\
-           \n -variabile target: decesso\
-           \n -zone blu e blu scuro: rischio elevato e molto elevato\
-           \n -punti blu: pazienti deceduti\
-           \n -zone rosse: rishio poco elevato\
-           \n -punti rossi: pazienti non deceduti\
-           \n -x: posizione del paziente in esame')
+    print('\nMappa di classificazione:')
+    print(u'\u2022', 'variabile target: decesso')
+    print(u'\u2022', 'zone blu e blu scuro: rischio elevato e molto elevato')
+    print(u'\u2022', 'punti blu: pazienti deceduti')
+    print(u'\u2022', 'zone rosse: rishio poco elevato')
+    print(u'\u2022', 'punti rossi: pazienti non deceduti')
+    print(u'\u2022', 'x: posizione del paziente in esame')
     classification_plot2D(X_1, X_2, y_train, SVC_2D, X_1_test, X_2_test, y_test)
     #
     if len(X_test)>0:
@@ -563,7 +564,7 @@ def prediction(X_train, y_train, X_test=np.array([]), y_test=np.array([])):
         if max(X_1_test) < min(X_1) or min(X_1_test) > max(X_1):
             flag = True
         if flag:
-            print('Test (tutto o in parte) fuori dall\' intervallo mostrato\n')
+            print('Test fuori dall\' intervallo mostrato: predizione non attendibile\n')
         
     
     ## Print info
@@ -573,11 +574,11 @@ def prediction(X_train, y_train, X_test=np.array([]), y_test=np.array([])):
     n_msc = np.sum(y_SVC_2D + y_train == 1)
     #print('N misclassified =', n_msc, '(%.2f%%)'%(100*n_msc/len(y_train)), '\n')
     #print('F1 score: %.2f' % f1_score(y_train, y_SVC_2D), '\n')
-    print('Sensibilita\': %.2f' % recall_score(y_train, y_SVC_2D), '\n')
+    print(u'Sensibilit\u00E0: %.2f' % recall_score(y_train, y_SVC_2D), '\n')
     print('Valore predittivo positivo: %.2f' % precision_score(y_train, y_SVC_2D), '\n')
     #
     if len(y_test)>10 and np.sum(y_test)>0:
-        print('Sensibilita\' test: %.2f' % recall_score(y_test, y_SVC_2D_test), '\n')
+        print(u'Sensibilit\u00E0 test: %.2f' % recall_score(y_test, y_SVC_2D_test), '\n')
         print('Valore predittivo positivo test: %.2f' % precision_score(y_test, y_SVC_2D_test), '\n')
     
 # ---- # ---- # ---- # ---- # ---- # ---- # ---- # ---- #
@@ -706,12 +707,12 @@ def run_classification():
     Data_test = pd.DataFrame()
     input_data = []
     #
-    value = input('Inserire "ID"\n')
+    value = input('Inserire \'ID\'\n')
     input_data.append(value)
     #
     flag = True
     while flag:
-        value = input('Inserire "Sesso (M=0, F=1)"\n')
+        value = input('Inserire \'Sesso (M=0, F=1)\'\n')
         if value in ('0', '1'):
             flag = False
     input_data.append(value)
@@ -720,12 +721,12 @@ def run_classification():
         flag = True
         while flag:
             if element == 'age':
-                str_to_show = 'Eta\''
+                str_to_show = 'Et\u00E0'
             else:
                 str_to_show = element
             min_val = MinMaxInfo[element]['min']
             max_val = MinMaxInfo[element]['max']
-            value = input('Inserire "%s" - intervallo osservato: [%.2f, %.2f]\n' % (str_to_show, min_val, max_val))
+            value = input(u'Inserire \'%s\' - intervallo osservato: [%.2f, %.2f]\n' % (str_to_show, min_val, max_val))
             #
             if isfloat(value) or value=='':
                 if isfloat(value):
@@ -743,11 +744,11 @@ def run_classification():
         input_data.append(value)
     Data_test = pd.DataFrame([input_data], columns=['ID', 'sex', *input_list], index=[1])
     #
-    print('\nValori inseriti:\n')
+    print('\nValori inseriti:')
     for element in Data_test.columns:
         str_to_show = ' '.join(list(map(lambda x: str(x), Data_test[element].values)))
         str_to_show = '%s: %s' % (element, str_to_show)
-        print(str_to_show)
+        print(u'\u2022', str_to_show)
         
         
     ## Preprocessing
