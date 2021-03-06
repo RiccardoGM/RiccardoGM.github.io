@@ -547,7 +547,13 @@ def prediction(X_train, y_train, X_test=np.array([]), y_test=np.array([])):
     
     
     ## Show scatterplot and info
-    print('\nMappa di classificazione:')
+    print('\nMappa di classificazione:\
+           \n -variabile target: decesso\
+           \n -zone blu e blu scuro: rischio elevato e molto elevato\
+           \n -punti blu: pazienti deceduti\
+           \n -zone rosse: rishio poco elevato\
+           \n -punti rossi: pazienti non deceduti\
+           \n -x: posizione del paziente in esame')
     classification_plot2D(X_1, X_2, y_train, SVC_2D, X_1_test, X_2_test, y_test)
     #
     if len(X_test)>0:
